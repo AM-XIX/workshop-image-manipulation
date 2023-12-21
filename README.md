@@ -277,15 +277,16 @@ Tri chaque colonne de l'image pour créer une image en fonction de la luminosit�
 > Cet algorithme a nécessité l'utilisation de tableaux pour pouvoir trier les pixels par la suite : on utilise des tableaux de tableaux ce qui était un peu tricky pour accéder aux bonnes valeurs au bon moment. Nous avons bloqué un petit moment sur eux car nous avions oublié de vider le tableau entre chaque étape, ce qui faisait que chaque itération du tableau contenait tous les pixels de la ligne en plus des lignes précédentes : les opérations étaient longues et le résultat était donc le même qu'en entrée. En ajoutant l'étape de vidage, tout fonctionnait comme nous le souhaitions !
 
 **Gestion et vidage du tableau**
+<!-- Une bonne pratique, et qui évite entre autre d'oublier de vider le tableau, c'est de créer vos variables seulement quand vous en avez réellement besoin, dans la plus petite scope possible: -->
 ```c++
 for (int x = 0; x < image.width(); x++)
 {
+    std::vector<glm::vec3> pixels = {};
     for (int y = 0; y < image.height(); y++)
     {
         pixels.push_back(image.pixel(x, y));
     }
     sortedPixels.push_back(pixels);
-    pixels.clear();
 }
 ```
 
