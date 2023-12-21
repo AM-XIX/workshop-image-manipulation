@@ -32,9 +32,9 @@ void blackAndWhite(sil::Image image)
 {
     for (glm::vec3 &color : image.pixels())
     {
-        float greyLevel = (color.r + color.g + color.b) / 3;
-        glm::vec3 newcolor(greyLevel);
-        color = newcolor;
+        float const greyLevel = (color.r + color.g + color.b) / 3;
+        // Pas besoin de cette variable intermédiaire newcolor:
+        color = glm::vec3(greyLevel);
     }
     image.save("output/logo-nb.png");
 }
@@ -86,7 +86,7 @@ void mirrorImage(sil::Image image)
 // -------------- Exo 007 ** --------------
 void imageBruitee(sil::Image image)
 {
-    int size = (image.width() * image.height()) / 2;
+    int size = (image.width() * image.height()) / 2; // Size n'est pas un bon nom de variable. noisy_pixels_count aurait été plus accurate.
     for (int i = 0; i <= size; i++)
     {
         int x = random_int(0, image.width());
@@ -122,15 +122,10 @@ void rgbSplit(sil::Image image)
     {
         for (int y = 0; y < image.height(); y++)
         {
-            if (x < 20)
-                modele.pixel(x, y).r = image.pixel(0, y).r;
-            else
-                modele.pixel(x, y).r = image.pixel(x - 20, y).r;
+            // Ce if peut être écrit de manière plus concise grâce à un max. Je vous laisse vous convaincre que ça revient au même
+            modele.pixel(x, y).r = image.pixel(std::max(x - 20, 0), y).r;
 
-            if (x + 10 >= image.width())
-                modele.pixel(x, y).b = image.pixel(image.width() - 1, y).b;
-            else
-                modele.pixel(x, y).b = image.pixel(x + 10, y).b;
+            modele.pixel(x, y).b = image.pixel(std::min(x + 10, image.width() - 1), y).b;
 
             modele.pixel(x, y).g = image.pixel(x, y).g;
         }
@@ -153,7 +148,7 @@ void imageLuminosity(sil::Image image)
 // -------------- Exo 011 ** --------------
 void createDisc(sil::Image disque, int r)
 {
-    int x0 = disque.width() / 2;
+    int x0 = disque.width() / 2; // x0 n'est pas un nom très clair. center_x aurait été mieux
     int y0 = disque.height() / 2;
     for (int x = 0; x < disque.width(); x++)
     {
@@ -188,9 +183,14 @@ sil::Image createCircle(sil::Image disque, int x0, int y0, int r, int thickness)
             }
         }
     }
-    // --- if you want to draw a single circle :
+    // Plutôt que d'avoir du code que vous commentez / décommentez au besoin, vous auriez pu faire deux fonctions, et réutiliser l'une pour implémenter l'autre
+    return disque;
+}
+
+void saveCircle(sil::Image disque, int x0, int y0, int r, int thickness)
+{
+    disque = createCircle(disque, x0, y0, r, thickness);
     disque.save("output/disque.png");
-    // return disque;
 }
 
 // -------------- Exo 013 *** --------------
@@ -310,7 +310,7 @@ void glitch(sil::Image image)
 // -------------- Exo 017 *** --------------
 void mandelbrot(sil::Image disque)
 {
-    const int max = 25;
+    const int max_iterations = 25; // nom de variable pas clair
     const int width = disque.width();
     const int height = disque.height();
     const float scale = 1.5;
@@ -327,20 +327,12 @@ void mandelbrot(sil::Image disque)
             std::complex<float> point((x - width / 1.5) / (width / 1.5) * scale - moveX, (y - height / 1.5) / (height / 1.5) * scale - moveY);
             std::complex<float> z(0, 0);
             int nb_iter = 0;
-            while (abs(z) < 2 && nb_iter <= max)
+            while (abs(z) < 2 && nb_iter <= max_iterations)
             {
                 z = z * z + point;
                 nb_iter++;
             }
-            if (nb_iter < max)
-            {
-                disque.pixel(x, y) = {0, 0, 0};
-            }
-            else
-            {
-                disque.pixel(x, y) = {white, white, white};
-                white += 0.0001;
-            }
+            disque.pixel(x, y) = glm::vec3{static_cast<float>(nb_iter) / static_cast<float>(max_iterations)}; // Cette manière de coloriser donne un résultat plus joli.
         }
     }
     disque.save("output/mandelbrot.png");
@@ -537,27 +529,24 @@ void sortPixel(sil::Image image)
 {
     sil::Image sorted{image.width(), image.height()};
 
-    std::vector<glm::vec3> pixels = {};
     std::vector<std::vector<glm::vec3>> sortedPixels = {};
 
     for (int x = 0; x < image.width(); x++)
     {
+        std::vector<glm::vec3> pixels = {};
         for (int y = 0; y < image.height(); y++)
         {
             pixels.push_back(image.pixel(x, y));
         }
         sortedPixels.push_back(pixels);
-        pixels.clear();
     }
 
-    for (int i = 0; i < sortedPixels.size(); i++)
+    // des boucles range-for rendraient le code plus lisible :
+    // De plus, la deuxième boucle ne sert à rien, puisque le code ne dépend pas de j (la variable brightness est inutilisée)
+    for (std::vector<glm::vec3>& pixels :  sortedPixels)
     {
-        for (int j = 0; j < sortedPixels[i].size(); j++)
-        {
-            float brightness = (sortedPixels[i][j].r + sortedPixels[i][j].g + sortedPixels[i][j].b) / 3;
-            std::sort(sortedPixels[i].begin(), sortedPixels[i].end(), [brightness](glm::vec3 a, glm::vec3 b)
+            std::sort(pixels.begin(), pixels.end(), [](glm::vec3 a, glm::vec3 b)
                       { return (a.r + a.g + a.b) / 3 < (b.r + b.g + b.b) / 3; });
-        }
     }
 
     for (int x = 0; x < image.width(); x++)
@@ -673,7 +662,7 @@ void kmeans(sil::Image image, int k)
 
     // Iterate until convergence
     bool converged = false;
-    while (!converged)
+    while (!converged) // Ca peut être dangereux, car il n'est pas garanti que l'algo converge. Vous devriez en + toujours avoir un nombre max d'itérations autorisées, sinon vous risquez d'avoir des boucles infinies parfois.
     {
         // Assign pixels to clusters
         std::vector<std::vector<glm::vec3>> clusters(k);
@@ -767,7 +756,7 @@ void circleWave(sil::Image disque, int r, int n)
                 int y2 = y0 + r * sin(angle2);
                 int x3 = x0 + r * cos(angle3);
                 int y3 = y;
-                0 + r *sin(angle3);
+                0 + r *sin(angle3); // ? Cette ligne ne fait rien
 
                 // Si le pixel est sur la limite du rayon
                 // Trace le contour du cercle
